@@ -1,0 +1,21 @@
+{
+    "name": "david/montecarlo",
+    "description": "Creates a montecarlo simulation based on a list of jira tickets",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "David\\Montecarlo\\": "src/"
+        },
+        "files": [
+            "src/helpers.php",
+            "src/montecarlo.php"
+        ]
+    },
+    "authors": [
+        {
+            "name": "David Callizaya",
+            "email": "davidcallizaya@gmail.com"
+        }
+    ],
+    "require": {}
+}
