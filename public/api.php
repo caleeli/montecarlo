@@ -30,6 +30,7 @@ try {
     $iterations = $input['iterations'] ?? 10000;
     $maxResults = $input['maxResults'] ?? 125;
     $maxMultiplier = $input['maxMultiplier'] ?? null;
+    $enabledSegments = $input['enabledSegments'] ?? ['S', 'M', 'L'];
 
     // Validate inputs
     if (empty($jql)) {
@@ -64,8 +65,8 @@ try {
     // Step 3: Build multipliers from history
     $multipliers = buildMultipliersFromHistory($historicalTickets, $maxMultiplier);
 
-    // Step 4: Run Monte Carlo simulation
-    $result = simulateProjectDuration($projectTickets, $multipliers, $iterations);
+    // Step 4: Run Monte Carlo simulation with segmented multipliers
+    $result = simulateProjectDuration($projectTickets, $multipliers, $iterations, $enabledSegments);
 
     // Prepare response
     $response = [
@@ -73,6 +74,9 @@ try {
         'stats' => $result['stats'],
         'samples' => $result['samples'],
         'historicalTickets' => $historicalTickets,
+        'segments' => $result['segments'],
+        'enabledSegments' => $result['enabledSegments'],
+        'activeMultipliersCount' => $result['activeMultipliersCount'],
         'multipliers' => [
             'count' => count($multipliers),
             'min' => round(min($multipliers), 2),

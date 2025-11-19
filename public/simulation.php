@@ -327,6 +327,24 @@
                             min="1"
                             step="0.1">
                     </div>
+
+                    <div class="form-group">
+                        <label>Segments to Include in Simulation</label>
+                        <div style="display: flex; gap: 15px; margin-top: 10px;">
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="checkbox" v-model="config.segmentS" value="S">
+                                <span>S (0..1]</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="checkbox" v-model="config.segmentM" value="M">
+                                <span>M (1,3]</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="checkbox" v-model="config.segmentL" value="L">
+                                <span>L (3,∞)</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Project Tickets Panel -->
@@ -381,6 +399,30 @@
                 <!-- Results Panel -->
                 <div v-if="results" class="card results-container">
                     <h2>📊 Simulation Results</h2>
+
+                    <!-- Segments Statistics -->
+                    <div v-if="results.segments" style="margin-bottom: 30px;">
+                        <h3 style="color: #667eea; margin-bottom: 15px;">
+                            Multiplier Segments Distribution 
+                            <span style="font-size: 0.9rem; color: #666;">(Using: {{ results.enabledSegments.join(', ') }})</span>
+                        </h3>
+                        <div class="stats-grid">
+                            <div v-for="(segment, key) in results.segments" :key="key" 
+                                 class="stat-card"
+                                 :style="{ opacity: results.enabledSegments.includes(key) ? 1 : 0.4 }">
+                                <div class="stat-label">{{ key }} - {{ segment.range }}</div>
+                                <div class="stat-value" style="font-size: 1.5rem;">{{ segment.count }}</div>
+                                <div style="margin-top: 10px; font-size: 0.85rem;">
+                                    <div>{{ segment.percentage.toFixed(1) }}% of total</div>
+                                    <div v-if="segment.count > 0">Mean: {{ segment.mean.toFixed(2) }}x</div>
+                                    <div v-if="segment.count > 0">Range: {{ segment.min.toFixed(2) }} - {{ segment.max.toFixed(2) }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="text-align: center; margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 8px;">
+                            <strong>Active multipliers in simulation:</strong> {{ results.activeMultipliersCount }} / {{ results.multipliers.count }}
+                        </div>
+                    </div>
                     
                     <div class="stats-grid">
                         <div class="stat-card">
@@ -468,7 +510,10 @@
                         doneStatuses: 'Done, Closed, Resolved, Wont Fix, Merged, Final Review',
                         iterations: 10000,
                         maxResults: 500,
-                        maxMultiplier: 10
+                        maxMultiplier: 10,
+                        segmentS: true,
+                        segmentM: true,
+                        segmentL: true
                     },
                     projectTickets: [
                         { key: 'NEW-1', estimate_days: 2 }
@@ -501,6 +546,19 @@
                     this.error = null;
                     this.results = null;
 
+                    // Build enabled segments array
+                    const enabledSegments = [];
+                    if (this.config.segmentS) enabledSegments.push('S');
+                    if (this.config.segmentM) enabledSegments.push('M');
+                    if (this.config.segmentL) enabledSegments.push('L');
+
+                    // Validate at least one segment is selected
+                    if (enabledSegments.length === 0) {
+                        this.error = 'Please select at least one segment (S, M, or L)';
+                        this.loading = false;
+                        return;
+                    }
+
                     try {
                         const response = await fetch('api.php', {
                             method: 'POST',
@@ -514,7 +572,8 @@
                                 projectTickets: this.projectTickets,
                                 iterations: this.config.iterations,
                                 maxResults: this.config.maxResults,
-                                maxMultiplier: this.config.maxMultiplier
+                                maxMultiplier: this.config.maxMultiplier,
+                                enabledSegments: enabledSegments
                             })
                         });
 

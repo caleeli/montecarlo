@@ -41,17 +41,78 @@ function buildMultipliersFromHistory(array $historicalTickets, $maxMultiplier = 
 }
 
 /**
- * Run Monte Carlo simulation for project duration.
- *
- * @param array $projectTickets  List of tickets with estimate_days
- * @param array $multipliers     Historical multipliers
- * @param int   $iterations      Number of simulation runs
- *
- * @return array                 Simulation results and statistics
+ * Segmenta los multiplicadores por tamaño.
+ * 
+ * @param array $multipliers Array de multiplicadores
+ * @return array Estadísticas por segmento S, M, L
  */
-function simulateProjectDuration(array $projectTickets, array $multipliers, int $iterations = 10000): array
+function segmentMultipliersBySize(array $multipliers): array
 {
-    $numMultipliers = count($multipliers);
+    $segments = [
+        'S' => ['range' => '(0..1]', 'values' => [], 'count' => 0, 'percentage' => 0],
+        'M' => ['range' => '(1,3]', 'values' => [], 'count' => 0, 'percentage' => 0],
+        'L' => ['range' => '(3,∞)', 'values' => [], 'count' => 0, 'percentage' => 0],
+    ];
+
+    foreach ($multipliers as $multiplier) {
+        if ($multiplier > 0 && $multiplier <= 1) {
+            $segments['S']['values'][] = $multiplier;
+            $segments['S']['count']++;
+        } elseif ($multiplier > 1 && $multiplier <= 3) {
+            $segments['M']['values'][] = $multiplier;
+            $segments['M']['count']++;
+        } elseif ($multiplier > 3) {
+            $segments['L']['values'][] = $multiplier;
+            $segments['L']['count']++;
+        }
+    }
+
+    $total = count($multipliers);
+    foreach ($segments as $key => $segment) {
+        $segments[$key]['percentage'] = $total > 0 ? ($segment['count'] / $total) * 100 : 0;
+        
+        if (!empty($segment['values'])) {
+            $segments[$key]['mean'] = array_sum($segment['values']) / count($segment['values']);
+            $segments[$key]['min'] = min($segment['values']);
+            $segments[$key]['max'] = max($segment['values']);
+        } else {
+            $segments[$key]['mean'] = 0;
+            $segments[$key]['min'] = 0;
+            $segments[$key]['max'] = 0;
+        }
+    }
+
+    return $segments;
+}
+
+/**
+ * Run Monte Carlo simulation for project duration using segmented multipliers.
+ *
+ * @param array $projectTickets     List of tickets with estimate_days
+ * @param array $multipliers        Historical multipliers
+ * @param int   $iterations         Number of simulation runs
+ * @param array $enabledSegments    Segments to use: ['S', 'M', 'L'] or subset
+ *
+ * @return array                    Simulation results and statistics
+ */
+function simulateProjectDuration(array $projectTickets, array $multipliers, int $iterations = 10000, array $enabledSegments = ['S', 'M', 'L']): array
+{
+    // Segmentar los multiplicadores
+    $segments = segmentMultipliersBySize($multipliers);
+    
+    // Filtrar solo los segmentos habilitados
+    $activeMultipliers = [];
+    foreach ($enabledSegments as $segment) {
+        if (isset($segments[$segment]) && !empty($segments[$segment]['values'])) {
+            $activeMultipliers = array_merge($activeMultipliers, $segments[$segment]['values']);
+        }
+    }
+    
+    if (empty($activeMultipliers)) {
+        throw new RuntimeException("No hay multiplicadores disponibles en los segmentos seleccionados.");
+    }
+    
+    $numMultipliers = count($activeMultipliers);
     $simulatedDurations = [];
 
     for ($i = 0; $i < $iterations; $i++) {
@@ -63,9 +124,9 @@ function simulateProjectDuration(array $projectTickets, array $multipliers, int 
                 continue;
             }
 
-            // Pick a random multiplier from history (bootstrap sampling)
-            $randomIndex = mt_rand(0, $numMultipliers - 1);
-            $multiplier = $multipliers[$randomIndex];
+            // Pick a random multiplier from active segments (bootstrap sampling)
+            $randomIndex = \mt_rand(0, $numMultipliers - 1);
+            $multiplier = $activeMultipliers[$randomIndex];
 
             $duration = $estimate * $multiplier;
             $totalDays += $duration;
@@ -90,6 +151,9 @@ function simulateProjectDuration(array $projectTickets, array $multipliers, int 
     return [
         'stats'      => $stats,
         'samples'    => $simulatedDurations, // full distribution if you want to plot it
+        'segments'   => $segments, // segment statistics
+        'enabledSegments' => $enabledSegments,
+        'activeMultipliersCount' => $numMultipliers
     ];
 }
 
