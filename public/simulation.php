@@ -352,7 +352,20 @@
                     <h2>📋 Project Tickets</h2>
                     
                     <div class="form-group">
-                        <label>Add Tickets</label>
+                        <label>Import from Clipboard</label>
+                        <textarea 
+                            v-model="importText" 
+                            placeholder="Paste tickets here (one per line)&#10;Format: TICKET-KEY[TAB or COMMA]DAYS&#10;Example:&#10;TICKET-1	2.5&#10;TICKET-2,3&#10;TICKET-3	1.5"
+                            rows="4"
+                            style="font-size: 12px;">
+                        </textarea>
+                        <button @click="importTickets" class="btn add-ticket-btn" style="background: #2196F3; margin-top: 10px;">
+                            📥 Import Tickets
+                        </button>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Add Tickets Manually</label>
                         <div v-for="(ticket, index) in projectTickets" :key="index" class="ticket-row">
                             <input 
                                 v-model="ticket.key" 
@@ -518,6 +531,7 @@
                     projectTickets: [
                         { key: 'NEW-1', estimate_days: 2 }
                     ],
+                    importText: '',
                     loading: false,
                     error: null,
                     results: null,
@@ -540,6 +554,59 @@
                 },
                 removeTicket(index) {
                     this.projectTickets.splice(index, 1);
+                },
+                importTickets() {
+                    if (!this.importText.trim()) {
+                        alert('Please paste some tickets in the text area');
+                        return;
+                    }
+
+                    const lines = this.importText.trim().split('\n');
+                    let imported = 0;
+                    let errors = [];
+                    const newTickets = []; // Temporary array for new tickets
+
+                    lines.forEach((line, lineNum) => {
+                        line = line.trim();
+                        if (!line) return; // Skip empty lines
+
+                        // Try to split by tab first, then by comma
+                        let parts = line.split('\t');
+                        if (parts.length < 2) {
+                            parts = line.split(',');
+                        }
+
+                        if (parts.length >= 2) {
+                            const key = parts[0].trim();
+                            const days = parseFloat(parts[1].trim());
+
+                            if (key && !isNaN(days) && days > 0) {
+                                newTickets.push({
+                                    key: key,
+                                    estimate_days: days
+                                });
+                                imported++;
+                            } else {
+                                errors.push(`Line ${lineNum + 1}: Invalid format - "${line}"`);
+                            }
+                        } else {
+                            errors.push(`Line ${lineNum + 1}: Could not parse - "${line}"`);
+                        }
+                    });
+
+                    // Show result message
+                    if (imported > 0) {
+                        // Replace all tickets with the new ones
+                        this.projectTickets = newTickets;
+                        this.importText = ''; // Clear the text area after successful import
+                        
+                        // Only show alert if there were errors
+                        if (errors.length > 0) {
+                            alert(`⚠️ ${errors.length} line(s) could not be imported:\n${errors.join('\n')}`);
+                        }
+                    } else {
+                        alert('❌ No tickets could be imported.\n\n' + errors.join('\n'));
+                    }
                 },
                 async runSimulation() {
                     this.loading = true;
