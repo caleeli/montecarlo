@@ -374,7 +374,7 @@
                             <input 
                                 v-model.number="ticket.estimate_days" 
                                 type="number" 
-                                placeholder="Días estimados"
+                                placeholder="days estimados"
                                 step="0.5"
                                 min="0.5">
                             <button @click="removeTicket(index)" class="remove-btn">✕</button>
@@ -444,31 +444,31 @@
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Minimum</div>
-                            <div class="stat-value">{{ formatNumber(results.stats.min) }} días</div>
+                            <div class="stat-value">{{ formatNumber(results.stats.min) }} days</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Mean</div>
-                            <div class="stat-value">{{ formatNumber(results.stats.mean) }} días</div>
+                            <div class="stat-value">{{ formatNumber(results.stats.mean) }} days</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">P50 (Median)</div>
-                            <div class="stat-value">{{ formatNumber(results.stats.p50) }} días</div>
+                            <div class="stat-value">{{ formatNumber(results.stats.p50) }} days</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">P80</div>
-                            <div class="stat-value">{{ formatNumber(results.stats.p80) }} días</div>
+                            <div class="stat-value">{{ formatNumber(results.stats.p80) }} days</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">P90</div>
-                            <div class="stat-value">{{ formatNumber(results.stats.p90) }} días</div>
+                            <div class="stat-value">{{ formatNumber(results.stats.p90) }} days</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">P95</div>
-                            <div class="stat-value">{{ formatNumber(results.stats.p95) }} días</div>
+                            <div class="stat-value">{{ formatNumber(results.stats.p95) }} days</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Maximum</div>
-                            <div class="stat-value">{{ formatNumber(results.stats.max) }} días</div>
+                            <div class="stat-value">{{ formatNumber(results.stats.max) }} days</div>
                         </div>
                     </div>
 
