@@ -258,6 +258,32 @@
         .full-width {
             grid-column: 1 / -1;
         }
+
+        .clickable-stat {
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .clickable-stat:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.35);
+        }
+
+        .selected-stat {
+            outline: 3px solid #ffd54f;
+        }
+
+        .planning-table th.section-divider {
+            background: #eef1ff;
+            color: #4756b3;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .planning-table td:nth-child(2) {
+            width: 180px;
+        }
     </style>
 </head>
 <body>
@@ -442,33 +468,169 @@
                             <div class="stat-label">Iterations</div>
                             <div class="stat-value">{{ results.stats.iterations }}</div>
                         </div>
-                        <div class="stat-card">
+                        <div 
+                            class="stat-card clickable-stat"
+                            :class="{ 'selected-stat': selectedResultMetric === 'min' }"
+                            @click="selectResultMetric('min')">
                             <div class="stat-label">Minimum</div>
                             <div class="stat-value">{{ formatNumber(results.stats.min) }} days</div>
                         </div>
-                        <div class="stat-card">
+                        <div 
+                            class="stat-card clickable-stat"
+                            :class="{ 'selected-stat': selectedResultMetric === 'mean' }"
+                            @click="selectResultMetric('mean')">
                             <div class="stat-label">Mean</div>
                             <div class="stat-value">{{ formatNumber(results.stats.mean) }} days</div>
                         </div>
-                        <div class="stat-card">
+                        <div 
+                            class="stat-card clickable-stat"
+                            :class="{ 'selected-stat': selectedResultMetric === 'p50' }"
+                            @click="selectResultMetric('p50')">
                             <div class="stat-label">P50 (Median)</div>
                             <div class="stat-value">{{ formatNumber(results.stats.p50) }} days</div>
                         </div>
-                        <div class="stat-card">
+                        <div 
+                            class="stat-card clickable-stat"
+                            :class="{ 'selected-stat': selectedResultMetric === 'p80' }"
+                            @click="selectResultMetric('p80')">
                             <div class="stat-label">P80</div>
                             <div class="stat-value">{{ formatNumber(results.stats.p80) }} days</div>
                         </div>
-                        <div class="stat-card">
+                        <div 
+                            class="stat-card clickable-stat"
+                            :class="{ 'selected-stat': selectedResultMetric === 'p90' }"
+                            @click="selectResultMetric('p90')">
                             <div class="stat-label">P90</div>
                             <div class="stat-value">{{ formatNumber(results.stats.p90) }} days</div>
                         </div>
-                        <div class="stat-card">
+                        <div 
+                            class="stat-card clickable-stat"
+                            :class="{ 'selected-stat': selectedResultMetric === 'p95' }"
+                            @click="selectResultMetric('p95')">
                             <div class="stat-label">P95</div>
                             <div class="stat-value">{{ formatNumber(results.stats.p95) }} days</div>
                         </div>
-                        <div class="stat-card">
+                        <div 
+                            class="stat-card clickable-stat"
+                            :class="{ 'selected-stat': selectedResultMetric === 'max' }"
+                            @click="selectResultMetric('max')">
                             <div class="stat-label">Maximum</div>
                             <div class="stat-value">{{ formatNumber(results.stats.max) }} days</div>
+                        </div>
+                    </div>
+                    <div style="margin: -15px 0 25px; color: #555; font-size: 0.95rem;">
+                        Click one duration result card (`Minimum`, `Mean`, `P50`, `P80`, `P90`, `P95`, `Maximum`) to calculate the planning table.
+                    </div>
+
+                    <div v-if="selectedResultMetric && planningTable" class="card full-width" style="padding: 20px; margin-bottom: 25px;">
+                        <h3 style="color: #667eea; margin-bottom: 15px;">
+                            Delivery Planning Table ({{ selectedResultMetric.toUpperCase() }})
+                        </h3>
+                        <div class="table-container" style="margin-top: 0;">
+                            <table class="planning-table">
+                                <thead>
+                                    <tr>
+                                        <th>Field</th>
+                                        <th>Value</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Total simulation days</td>
+                                        <td>{{ formatNumber(planningTable.totalSimulationDays) }}</td>
+                                        <td>From selected percentile result.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Holidays and PTOs</td>
+                                        <td>
+                                            <input v-model.number="planningInputs.holidaysAndPtos" type="number" min="0" step="1">
+                                        </td>
+                                        <td>Editable.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Maintainance days</td>
+                                        <td>
+                                            <input v-model.number="planningInputs.maintenanceDays" type="number" min="0" step="1">
+                                        </td>
+                                        <td>Default: round(total simulation days / 5). Editable.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Total days</td>
+                                        <td>{{ planningTable.totalDays }}</td>
+                                        <td>Total simulation + holidays/PTOs + maintainance.</td>
+                                    </tr>
+                                    <tr>
+                                        <th colspan="3" class="section-divider">Section Division</th>
+                                    </tr>
+                                    <tr>
+                                        <td>Developers assigned</td>
+                                        <td>
+                                            <input v-model.number="planningInputs.developersAssigned" type="number" min="1" step="1">
+                                        </td>
+                                        <td>Editable.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>QA assigned</td>
+                                        <td>
+                                            <input v-model.number="planningInputs.qaAssigned" type="number" min="1" step="1">
+                                        </td>
+                                        <td>Editable.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>QA overhead (%)</td>
+                                        <td>
+                                            <input v-model.number="planningInputs.qaOverheadPercent" type="number" min="0" max="100" step="1">
+                                        </td>
+                                        <td>Extra QA workload on top of development. Default: 25%. Editable.</td>
+                                    </tr>
+                                    <tr>
+                                        <th colspan="3" class="section-divider">Section Division</th>
+                                    </tr>
+                                    <tr>
+                                        <td>Business effort days</td>
+                                        <td>{{ planningTable.businessDaysOfTeam }}</td>
+                                        <td>round(total days * (1 + QA overhead)).</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Contingencies / Risk (%)</td>
+                                        <td>
+                                            <input v-model.number="planningInputs.contingenciesRiskPercent" type="number" min="0" max="100" step="1">
+                                        </td>
+                                        <td>Default: 5%. Editable.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Development weeks</td>
+                                        <td>{{ planningTable.developmentWeeks }}</td>
+                                        <td>ceil((total days/developers assigned/5)*(1+risk)).</td>
+                                    </tr>
+                                    <tr>
+                                        <td>QA weeks</td>
+                                        <td>{{ planningTable.qaWeeks }}</td>
+                                        <td>ceil(((total days/QA assigned)*QA overhead/5)*(1+risk)).</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Start date</td>
+                                        <td>
+                                            <input v-model="planningInputs.startDate" type="date">
+                                        </td>
+                                        <td>Editable.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Estimated end date</td>
+                                        <td>{{ planningTable.estimatedEndDate }}</td>
+                                        <td>Start date + development weeks + QA weeks.</td>
+                                    </tr>
+                                    <tr>
+                                        <th colspan="3" class="section-divider">Section Division</th>
+                                    </tr>
+                                    <tr>
+                                        <td>T-shirt size</td>
+                                        <td>{{ planningTable.tshirtSize }}</td>
+                                        <td>S: 1-5 days, M: 1-4 weeks, L: 1-3 months, XL: 3+ months.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
@@ -526,7 +688,7 @@
                         maxMultiplier: 10,
                         segmentS: true,
                         segmentM: true,
-                        segmentL: true
+                        segmentL: false
                     },
                     projectTickets: [
                         { key: 'NEW-1', estimate_days: 2 }
@@ -535,7 +697,17 @@
                     loading: false,
                     error: null,
                     results: null,
-                    chart: null
+                    chart: null,
+                    selectedResultMetric: null,
+                    planningInputs: {
+                        holidaysAndPtos: 0,
+                        maintenanceDays: 0,
+                        developersAssigned: 1,
+                        qaAssigned: 1,
+                        qaOverheadPercent: 25,
+                        contingenciesRiskPercent: 5,
+                        startDate: new Date().toISOString().slice(0, 10)
+                    }
                 }
             },
             computed: {
@@ -543,6 +715,42 @@
                     return this.projectTickets.reduce((sum, ticket) => {
                         return sum + (parseFloat(ticket.estimate_days) || 0);
                     }, 0);
+                },
+                planningTable() {
+                    if (!this.results || !this.selectedResultMetric || !this.results.stats) return null;
+
+                    const totalSimulationDays = Number(this.results.stats[this.selectedResultMetric] || 0);
+                    const holidaysAndPtos = this.safeNumber(this.planningInputs.holidaysAndPtos);
+                    const maintenanceDays = this.safeNumber(this.planningInputs.maintenanceDays);
+                    const totalDays = Math.round(totalSimulationDays + holidaysAndPtos + maintenanceDays);
+
+                    const qaOverhead = this.safeNumber(this.planningInputs.qaOverheadPercent) / 100;
+                    const contingenciesRisk = this.safeNumber(this.planningInputs.contingenciesRiskPercent) / 100;
+                    const developersAssigned = Math.max(1, this.safeNumber(this.planningInputs.developersAssigned));
+                    const qaAssigned = Math.max(1, this.safeNumber(this.planningInputs.qaAssigned));
+
+                    const businessDaysOfTeam = Math.round(totalDays * (1 + qaOverhead));
+                    const developmentWeeks = Math.ceil(((totalDays / developersAssigned) / 5) * (1 + contingenciesRisk));
+                    const qaWeeks = Math.ceil((((totalDays / qaAssigned) * qaOverhead) / 5) * (1 + contingenciesRisk));
+                    const totalCalendarWeeks = developmentWeeks + qaWeeks;
+
+                    const startDate = this.planningInputs.startDate ? new Date(this.planningInputs.startDate) : new Date();
+                    const estimatedEndDateObj = new Date(startDate);
+                    estimatedEndDateObj.setDate(startDate.getDate() + ((developmentWeeks + qaWeeks) * 7));
+
+                    return {
+                        totalSimulationDays,
+                        totalDays,
+                        businessDaysOfTeam,
+                        developmentWeeks,
+                        qaWeeks,
+                        estimatedEndDate: estimatedEndDateObj.toLocaleDateString('es-ES', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        }),
+                        tshirtSize: this.calculateTshirtSize(totalDays, totalCalendarWeeks)
+                    };
                 }
             },
             methods: {
@@ -612,6 +820,7 @@
                     this.loading = true;
                     this.error = null;
                     this.results = null;
+                    this.selectedResultMetric = null;
 
                     // Build enabled segments array
                     const enabledSegments = [];
@@ -651,6 +860,7 @@
                         }
 
                         this.results = data;
+                        this.resetPlanningInputs();
                         
                         // Wait for next tick to ensure canvas is rendered
                         this.$nextTick(() => {
@@ -673,6 +883,33 @@
                         month: 'short', 
                         day: 'numeric' 
                     });
+                },
+                safeNumber(value) {
+                    const num = Number(value);
+                    return Number.isFinite(num) ? num : 0;
+                },
+                selectResultMetric(metricKey) {
+                    if (!this.results || !this.results.stats || typeof this.results.stats[metricKey] === 'undefined') return;
+
+                    this.selectedResultMetric = metricKey;
+                    this.planningInputs.maintenanceDays = Math.round(this.safeNumber(this.results.stats[metricKey]) / 5);
+                },
+                resetPlanningInputs() {
+                    this.planningInputs = {
+                        holidaysAndPtos: 0,
+                        maintenanceDays: 0,
+                        developersAssigned: 1,
+                        qaAssigned: 1,
+                        qaOverheadPercent: 25,
+                        contingenciesRiskPercent: 5,
+                        startDate: new Date().toISOString().slice(0, 10)
+                    };
+                },
+                calculateTshirtSize(totalDays, totalCalendarWeeks) {
+                    if (totalDays <= 5) return 'S';
+                    if (totalCalendarWeeks <= 4) return 'M';
+                    if (totalCalendarWeeks < 12) return 'L';
+                    return 'XL';
                 },
                 renderChart() {
                     if (!this.results || !this.$refs.chartCanvas) return;
@@ -749,4 +986,3 @@
     </script>
 </body>
 </html>
-
